@@ -40,9 +40,9 @@ function location(LData){
 
 //WEATHER ROUTE 
 server.get('/weather',(req,res) => {
-    let Weather = reaquire('./data/weather.json');
+    let Weather = require('./data/weather.json');
     let result = [];
-    weatherInfo.WData.forEach( element => result.push( new weatherForecast( element ) ) );
+    Weather.data.forEach( element => result.push( new weatherForecast( element ) ) );
     res.send( result );
      
 })
@@ -52,6 +52,13 @@ function weatherForecast(WData){
         this.time = WData.datetime;
 }
 
+server.get('*',(req,res) => {
+    let errorObject = {
+        status: 500,
+        responseText: 'Sorry, something went wrong'
+      };
+      res.status( 500 ).send( errorObject );
+})
 server.listen(PORT,() => {
     console.log(`I am in port ${PORT}`);
 })
