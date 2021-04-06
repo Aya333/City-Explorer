@@ -16,21 +16,42 @@ server.use(cors());
 
 //ROUTES
 
+//LOCATION ROUTE 
 server.get('/location', (req,res)=>{
     //res.send('I AM IN LOCATION ROUTE')
     let locate = require('./data/location.json');
     //console.log(locate);
     let RecentLocation = new location(locate);
+    res.send(RecentLocation);
 
 })
 
-finction location(data){
-    let search = data[0].display_name.split (',');
+function location(LData){
+    let search = LData[0].display_name.split (',');
+
     this.search_query = search[0];
-    this.formatted_query =data[0].display_name;
-    this.latitude = data[0].lat;
-    this.longitude = data[0].lon;
+
+    this.formatted_query = LData[0].display_name;
+
+    this.latitude = LData[0].lat;
+
+    this.longitude = LData[0].lon;
 }
+
+//WEATHER ROUTE 
+server.get('/weather',(req,res) => {
+    let Weather = reaquire('./data/weather.json');
+    let result = [];
+    weatherInfo.WData.forEach( element => result.push( new weatherForecast( element ) ) );
+    res.send( result );
+     
+})
+
+function weatherForecast(WData){
+        this.forecast = WData.weather.description;
+        this.time = WData.datetime;
+}
+
 server.listen(PORT,() => {
     console.log(`I am in port ${PORT}`);
 })
