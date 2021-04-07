@@ -1,20 +1,16 @@
 "use strict";
 
-const express = require("express");
-
 require("dotenv").config();
-
+const express = require("express");
 const server = express();
 
 //const PORT = 5000;
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 const cors = require("cors");
 
-server.use(cors());
-
 const superAgent = require("superagent");
-
+server.use(cors());
 //ROUTES
 
 server.get("/", homeRouteHandler);
@@ -40,7 +36,7 @@ function locationRouteHandler(req, res) {
   superAgent.get(LocURL).then((LocData) => {
     let data = LocData.body;
 
-    let cityLocation = new location(cityName, data);
+    let cityLocation = new location(data);
     console.log(cityLocation);
 
     res.send(cityLocation);
@@ -48,20 +44,19 @@ function locationRouteHandler(req, res) {
 }
 
 function weatherRouteHandler(req, res) {
-  console.log(req.query);
+  //console.log(req.query);
 
   let cityName = req.query.search_query;
-  console.log(cityName);
+ // console.log(cityName);
 
   let key = process.env.WEATHER_API_KEY;
-  let weatherURL = `https://api.weatherbit.io/v2.0/forecast/daily?city=${cityName},NC&key=${key}`;
+  let weatherURL = `https://api.weatherbit.io/v2.0/forecast/daily?city=${cityName}&key=${key}`;
 
   superAgent.get(weatherURL).then((weatherData) => {
-    let data = weatherData.body;
-    let result = data.weatherData.map((val) => {
+    let data = weatherData.body.data.map((val) => {
       return new weatherForecast(val);
     });
-    res.send(result);
+    res.send(data);
   });
 }
 function parksRouteHandler(req, res) {
@@ -71,16 +66,13 @@ function parksRouteHandler(req, res) {
 
   let key = process.env.PARKS_API_KEY;
 
-  let parkURL = `https://developer.nps.gov/api/v1/parks?parkCode=${cityName}&api_key=${key}`;
+  let parkURL = `https://developer.nps.gov/api/v1/parks?q=${cityName}&api_key=${key}`;
 
-  superagent.get(parkURL).then((parkData) => {
-    let data = parkData.body;
-
-    let result = data.parkData.map((val) => {
+  superAgent.get(parkURL).then((parkData) => {
+    let data = parkData.body.data.map((val) => {
       return new Parks(val);
     });
-
-    res.send(result);
+    res.send(data);
   });
 }
 
@@ -110,12 +102,12 @@ function weatherForecast(WData) {
   this.forecast = WData.weather.description;
   this.time = WData.datetime;
 }
-function Parks(data) {
-  this.name = data.fullName;
-  this.address = `${data.addresses[0].line1}, ${data.addresses[0].city}, ${data.addresses[0].stateCode} ${data.addresses[0].postalCode}`;
-  this.fee = data.entranceFees[0].cost;
-  this.description = data.description;
-  this.url = data.url;
+function Parks(PData) {
+  this.name = PData.fullName;
+  this.address = `${PData.addresses[0].line1}, ${PData.addresses[0].city}, ${PData.addresses[0].stateCode} ${PData.addresses[0].postalCode}`;
+  this.fee = PData.entranceFees[0].cost;
+  this.description = PData.description;
+  this.url = PData.url;
 }
 
 server.listen(PORT, () => {
