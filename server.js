@@ -25,6 +25,8 @@ server.get("/", homeRouteHandler);
 server.get("/location", locationRouteHandler);
 server.get("/weather", weatherRouteHandler);
 server.get("/parks", parksRouteHandler);
+server.get ('/movies',moviesHandler);
+server.get ('/yelp', yelpHandler);
 server.get("*", notFoundHandler);
 
 //ROUTES HANDLERS
@@ -119,6 +121,44 @@ function parksRouteHandler(req, res) {
   });
 }
 
+function moviesHandler (req,res) {
+  let cityName = req.query.search_query;
+  console.log (cityName);
+  let key = process.env.MOVIE_API_KEY;
+  let moviesURL = `https://api.themoviedb.org/3/discover/movie?api_key=${key}&query=${cityName}`;
+  superagent.get(moviesURL).then(movieData => {
+    let mData = movieData.body.map (val=>{
+      return new Movies (val);
+    });
+    res.send (mData);
+  })
+    .catch (error=>{
+      res.send(error);
+    });
+
+
+}
+function yelpHandler (req,res) {
+let cityName = req.query.search_query;
+let page = req.query.page;
+let key = process.env.YELP_API_KEY;
+let limit = 5;
+let offset =  ((page - 1) * limit) + 1;
+let yelpURL = `https://api.yelp.com/v3/businesses/search?term=restaurants&location=${cityName}&limit=${limit}&offset=${offset || 5}`;
+superagent.get(yelpURL)
+  .set ('Authorization',`Bearer ${key}`)
+  .then (yelpData=>{
+    let yData = yelpData.body.map (val=>{
+      return new Yelp(val);
+    });
+    res.send (ytData);
+  })
+
+  .catch (error=>{
+    res.send(error);
+  });
+}
+
 function notFoundHandler(req, res) {
   let errorObject = {
     status: 500,
@@ -151,6 +191,23 @@ function Parks(PData) {
   this.fee = PData.entranceFees[0].cost;
   this.description = PData.description;
   this.url = PData.url;
+}
+function Movies (movieData){
+  this.title = movieData.original_title;
+  this.overview = movieData.overview;
+  this.average_votes = movieData.vote_average;
+  this.total_votes = movieData.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/w500${movieData.backdrop_path}`;
+  this.popularity = movieData.popularity;
+  this.released_on = movieData.release_date;
+}
+
+function Yelp (yelpData){
+  this.name = yelpData.name;
+  this.image_url = yelpData.image_url;
+  this.price = yelpData.price;
+  this.rating =yelpData.rating ;
+  this.url = yelpData.url;
 }
 
 client.connect()
