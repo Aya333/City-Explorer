@@ -11,6 +11,14 @@ const cors = require("cors");
 
 const superAgent = require("superagent");
 server.use(cors());
+
+const pg = require('pg')
+const client = new pg.Client( {
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized : false
+  }
+});
 //ROUTES
 
 server.get("/", homeRouteHandler);
@@ -33,21 +41,54 @@ function locationRouteHandler(req, res) {
 
   let key = process.env.GEOCODE_API_KEY;
   let LocURL = `https://eu1.locationiq.com/v1/search.php?key=${key}&q=${cityName}&format=json`;
-  superAgent.get(LocURL).then((LocData) => {
-    let data = LocData.body;
 
-    let cityLocation = new location(data);
-    console.log(cityLocation);
+  let SQL = 'SELECT DISTINCT * FROM locations WHERE search_query=$1';
 
-    res.send(cityLocation);
-  });
+  let safeValues = [cityName];
+
+  client.query( SQL, safeValues )
+  .then( result => {
+    if ( result.rowCount > 0 ) {
+      res.send( result.rows[0] );
+    }
+   
+    else if ( result.rowCount <= 0 ) {
+      superagent.get( LocURL )
+        .then( LocData => {
+        let data = LocData.body;
+        let cityLocation = new location( cityName, data );
+        let search_query = cityName;
+        let formatted_query = location.formatted_query;
+        let latitude = location.latitude;
+        let longitude = location.longitude;
+        res.send( cityLocation );
+
+        let SQL = 'INSERT INTO locations (search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4) RETURNING *;';
+        let safeValues = [search_query, formatted_query, latitude, longitude];
+        client.query( SQL, safeValues );
+      } )
+          .catch( error => {
+            res.send( error );
+          } ) ;
+    }
+  } );
+  // MY PREVIOUS PART OF LAB07
+
+  // superAgent.get(LocURL).then((LocData) => {
+  //   let data = LocData.body;
+
+  //   let cityLocation = new location(data);
+  //   console.log(cityLocation);
+
+  //   res.send(cityLocation);
+  // });
 }
 
 function weatherRouteHandler(req, res) {
-  //console.log(req.query);
+  console.log(req.query);
 
   let cityName = req.query.search_query;
- // console.log(cityName);
+ console.log(cityName);
 
   let key = process.env.WEATHER_API_KEY;
   let weatherURL = `https://api.weatherbit.io/v2.0/forecast/daily?city=${cityName}&key=${key}`;
@@ -59,6 +100,8 @@ function weatherRouteHandler(req, res) {
     res.send(data);
   });
 }
+
+
 function parksRouteHandler(req, res) {
   console.log(req.query);
   let cityName = req.query.search_query;
@@ -110,6 +153,10 @@ function Parks(PData) {
   this.url = PData.url;
 }
 
-server.listen(PORT, () => {
-  console.log(`I am in port ${PORT}`);
-});
+client.connect()
+ .then (()=>{
+server.listen(PORT,()=>{
+console,log (`listening on PORT ${PORT}`)
+})
+
+ });
